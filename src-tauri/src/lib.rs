@@ -10,6 +10,9 @@ pub fn run() {
       get_branches,
       get_remotes,
       get_commits,
+      get_commit_changes,
+      get_commit_file_diff,
+      get_repo_info,
       get_status,
       checkout_branch,
       get_worktrees
@@ -77,6 +80,21 @@ async fn get_remotes(repo_path: String) -> Result<Vec<git::GitRemote>, String> {
 #[tauri::command]
 async fn get_commits(repo_path: String) -> Result<Vec<git::GitCommit>, String> {
     git::get_commits(&repo_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_commit_changes(repo_path: String, commit_hash: String) -> Result<Vec<git::GitCommitChange>, String> {
+    git::get_commit_changes(&repo_path, &commit_hash).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_commit_file_diff(repo_path: String, commit_hash: String, file_path: String) -> Result<git::GitCommitFileDiff, String> {
+    git::get_commit_file_diff(&repo_path, &commit_hash, &file_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_repo_info(repo_path: String) -> Result<git::GitRepoInfo, String> {
+    git::get_repo_info(&repo_path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

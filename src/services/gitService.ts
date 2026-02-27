@@ -1,4 +1,4 @@
-import type { GitBranch, GitRemote, GitCommit, GitStatus, Worktree } from '../types';
+import type { GitBranch, GitRemote, GitCommit, GitCommitChange, GitCommitFileDiff, GitRepoInfo, GitStatus, Worktree } from '../types';
 import { invoke as tauriInvoke } from '@tauri-apps/api/core';
 
 const isTauriRuntime = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -27,6 +27,44 @@ const mockInvoke = async (command: string, params: any) => {
       return [];
     case 'get_worktrees':
       return [{ path: params.repoPath, branch: 'main' }];
+    case 'get_commit_changes':
+      return [
+        { path: 'src/main.tsx', status: 'modified' },
+        { path: 'README.md', status: 'added' }
+      ];
+    case 'get_commit_file_diff':
+      return {
+        original: [
+          'import React from \'react\';',
+          '',
+          'function App() {',
+          '  return <div>Hello</div>;',
+          '}',
+        ].join('\n'),
+        modified: [
+          'import React from \'react\';',
+          'import "./App.css";',
+          '',
+          'function App() {',
+          '  return <div className="app">Hello</div>;',
+          '}',
+        ].join('\n'),
+      };
+    case 'get_repo_info':
+      return {
+        repoPath: params.repoPath,
+        gitDirPath: `${params.repoPath}/.git`,
+        worktreePath: params.repoPath,
+        isBare: false,
+        totalSizeBytes: 1024 * 1024 * 245,
+        worktreeSizeBytes: 1024 * 1024 * 190,
+        gitMetadataSizeBytes: 1024 * 1024 * 55,
+        gitObjectsSizeBytes: 1024 * 1024 * 48,
+        gitPackfilesSizeBytes: 1024 * 1024 * 37,
+        gitRefsSizeBytes: 1024 * 18,
+        lfsEnabled: false,
+        lfsObjectsSizeBytes: 0,
+      };
     default:
       return [];
   }
@@ -143,6 +181,45 @@ export class GitService {
       return worktrees;
     } catch (error) {
       console.error('Error getting worktrees:', error);
+      throw error;
+    }
+  }
+
+  async getCommitChanges(commitHash: string): Promise<GitCommitChange[]> {
+    try {
+      const changes = await invoke<GitCommitChange[]>('get_commit_changes', {
+        repoPath: this.workdir,
+        commitHash
+      });
+      return changes;
+    } catch (error) {
+      console.error('Error getting commit changes:', error);
+      throw error;
+    }
+  }
+
+  async getCommitFileDiff(commitHash: string, filePath: string): Promise<GitCommitFileDiff> {
+    try {
+      const diff = await invoke<GitCommitFileDiff>('get_commit_file_diff', {
+        repoPath: this.workdir,
+        commitHash,
+        filePath
+      });
+      return diff;
+    } catch (error) {
+      console.error('Error getting commit file diff:', error);
+      throw error;
+    }
+  }
+
+  async getRepoInfo(): Promise<GitRepoInfo> {
+    try {
+      const repoInfo = await invoke<GitRepoInfo>('get_repo_info', {
+        repoPath: this.workdir
+      });
+      return repoInfo;
+    } catch (error) {
+      console.error('Error getting repo info:', error);
       throw error;
     }
   }

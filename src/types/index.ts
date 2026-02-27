@@ -24,6 +24,16 @@ export interface GitCommit {
   message: string;
 }
 
+export interface GitCommitChange {
+  path: string;
+  status: string;
+}
+
+export interface GitCommitFileDiff {
+  original: string;
+  modified: string;
+}
+
 export interface GitStatus {
   filePath: string;
   status: string;
@@ -32,4 +42,19 @@ export interface GitStatus {
 export interface Worktree {
   path: string;
   branch: string;
+}
+
+export interface GitRepoInfo {
+  repoPath: string;
+  gitDirPath: string;
+  worktreePath: string;
+  isBare: boolean;
+  totalSizeBytes: number;
+  worktreeSizeBytes: number;
+  gitMetadataSizeBytes: number;
+  gitObjectsSizeBytes: number;
+  gitPackfilesSizeBytes: number;
+  gitRefsSizeBytes: number;
+  lfsEnabled: boolean;
+  lfsObjectsSizeBytes: number;
 }

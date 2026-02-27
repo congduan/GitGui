@@ -1,6 +1,7 @@
-use git2::{BranchType, Repository, StatusOptions, StatusShow}; 
+use git2::{BranchType, Delta, DiffOptions, Oid, Repository, StatusOptions, StatusShow, Tree};
 use serde::{Deserialize, Serialize}; 
 use std::error::Error; 
+use std::fs;
 use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -29,6 +30,20 @@ pub struct GitCommit {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct GitCommitChange {
+    pub path: String,
+    pub status: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GitCommitFileDiff {
+    pub original: String,
+    pub modified: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct GitStatus {
     pub file_path: String,
     pub status: String,
@@ -41,6 +56,23 @@ pub struct Worktree {
     pub branch: String,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GitRepoInfo {
+    pub repo_path: String,
+    pub git_dir_path: String,
+    pub worktree_path: String,
+    pub is_bare: bool,
+    pub total_size_bytes: u64,
+    pub worktree_size_bytes: u64,
+    pub git_metadata_size_bytes: u64,
+    pub git_objects_size_bytes: u64,
+    pub git_packfiles_size_bytes: u64,
+    pub git_refs_size_bytes: u64,
+    pub lfs_enabled: bool,
+    pub lfs_objects_size_bytes: u64,
+}
+
 fn open_repo(repo_path: &str) -> Result<Repository, Box<dyn Error>> {
     let path = Path::new(repo_path);
     let discover_path = if path.is_file() {
@@ -50,6 +82,61 @@ fn open_repo(repo_path: &str) -> Result<Repository, Box<dyn Error>> {
     };
     let repo = Repository::discover(discover_path)?;
     Ok(repo)
+}
+
+fn dir_size(path: &Path, skip_name: Option<&str>) -> u64 {
+    let mut total = 0_u64;
+    let entries = match fs::read_dir(path) {
+        Ok(entries) => entries,
+        Err(_) => return total,
+    };
+
+    for entry_result in entries {
+        let entry = match entry_result {
+            Ok(entry) => entry,
+            Err(_) => continue,
+        };
+        let entry_path = entry.path();
+        if let Some(skip) = skip_name {
+            if entry_path.file_name().and_then(|n| n.to_str()) == Some(skip) {
+                continue;
+            }
+        }
+
+        let metadata = match fs::symlink_metadata(&entry_path) {
+            Ok(metadata) => metadata,
+            Err(_) => continue,
+        };
+        if metadata.is_file() {
+            total = total.saturating_add(metadata.len());
+        } else if metadata.is_dir() {
+            total = total.saturating_add(dir_size(&entry_path, None));
+        }
+    }
+    total
+}
+
+fn contains_lfs_filter(path: &Path) -> bool {
+    match fs::read_to_string(path) {
+        Ok(content) => content.contains("filter=lfs"),
+        Err(_) => false,
+    }
+}
+
+fn detect_lfs_enabled(repo: &Repository, worktree_path: &Path, git_dir: &Path) -> bool {
+    if let Ok(config) = repo.config() {
+        if config.get_string("filter.lfs.clean").is_ok() || config.get_string("filter.lfs.smudge").is_ok() {
+            return true;
+        }
+    }
+
+    if contains_lfs_filter(&worktree_path.join(".gitattributes")) {
+        return true;
+    }
+    if contains_lfs_filter(&git_dir.join("info").join("attributes")) {
+        return true;
+    }
+    false
 }
 
 pub fn get_branches(repo_path: &str) -> Result<Vec<GitBranch>, Box<dyn Error>> {
@@ -175,6 +262,100 @@ pub fn get_status(repo_path: &str) -> Result<Vec<GitStatus>, Box<dyn Error>> {
     Ok(status_list)
 }
 
+pub fn get_commit_changes(repo_path: &str, commit_hash: &str) -> Result<Vec<GitCommitChange>, Box<dyn Error>> {
+    let repo = open_repo(repo_path)?;
+    let oid = Oid::from_str(commit_hash)?;
+    let commit = repo.find_commit(oid)?;
+    let current_tree = commit.tree()?;
+
+    let parent_tree = if commit.parent_count() > 0 {
+        Some(commit.parent(0)?.tree()?)
+    } else {
+        None
+    };
+
+    let diff = repo.diff_tree_to_tree(parent_tree.as_ref(), Some(&current_tree), None)?;
+    let mut changes = Vec::new();
+
+    for delta in diff.deltas() {
+        let status = match delta.status() {
+            Delta::Added => "added",
+            Delta::Deleted => "deleted",
+            Delta::Modified => "modified",
+            Delta::Renamed => "renamed",
+            Delta::Copied => "copied",
+            Delta::Typechange => "typechange",
+            _ => "unknown",
+        };
+
+        let path = delta
+            .new_file()
+            .path()
+            .or_else(|| delta.old_file().path())
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default();
+
+        changes.push(GitCommitChange {
+            path,
+            status: status.to_string(),
+        });
+    }
+
+    Ok(changes)
+}
+
+fn read_file_from_tree(repo: &Repository, tree: &Tree, file_path: &str) -> Result<Option<String>, Box<dyn Error>> {
+    let entry = match tree.get_path(Path::new(file_path)) {
+        Ok(entry) => entry,
+        Err(_) => return Ok(None),
+    };
+    let object = entry.to_object(repo)?;
+    let blob = match object.as_blob() {
+        Some(blob) => blob,
+        None => return Ok(None),
+    };
+    Ok(Some(String::from_utf8_lossy(blob.content()).to_string()))
+}
+
+pub fn get_commit_file_diff(repo_path: &str, commit_hash: &str, file_path: &str) -> Result<GitCommitFileDiff, Box<dyn Error>> {
+    let repo = open_repo(repo_path)?;
+    let oid = Oid::from_str(commit_hash)?;
+    let commit = repo.find_commit(oid)?;
+    let current_tree = commit.tree()?;
+
+    let parent_tree = if commit.parent_count() > 0 {
+        Some(commit.parent(0)?.tree()?)
+    } else {
+        None
+    };
+
+    let mut diff_opts = DiffOptions::new();
+    diff_opts.pathspec(file_path);
+    let diff = repo.diff_tree_to_tree(parent_tree.as_ref(), Some(&current_tree), Some(&mut diff_opts))?;
+
+    let delta = diff.deltas().next();
+    let old_path = delta
+        .as_ref()
+        .and_then(|d| d.old_file().path())
+        .map(|p| p.to_string_lossy().to_string());
+    let new_path = delta
+        .as_ref()
+        .and_then(|d| d.new_file().path())
+        .map(|p| p.to_string_lossy().to_string());
+
+    let original = match (&parent_tree, old_path.as_deref()) {
+        (Some(tree), Some(path)) => read_file_from_tree(&repo, tree, path)?.unwrap_or_default(),
+        _ => String::new(),
+    };
+
+    let modified = match new_path.as_deref() {
+        Some(path) => read_file_from_tree(&repo, &current_tree, path)?.unwrap_or_default(),
+        None => String::new(),
+    };
+
+    Ok(GitCommitFileDiff { original, modified })
+}
+
 pub fn checkout_branch(repo_path: &str, branch_name: &str) -> Result<(), Box<dyn Error>> {
     let repo = open_repo(repo_path)?;
     let branch = repo.find_branch(branch_name, BranchType::Local)?;
@@ -226,4 +407,38 @@ pub fn get_worktrees(repo_path: &str) -> Result<Vec<Worktree>, Box<dyn Error>> {
     }
     
     Ok(result)
+}
+
+pub fn get_repo_info(repo_path: &str) -> Result<GitRepoInfo, Box<dyn Error>> {
+    let repo = open_repo(repo_path)?;
+    let git_dir = repo.path();
+    let worktree_path = repo.workdir().unwrap_or(git_dir);
+    let is_bare = repo.is_bare();
+
+    let worktree_size_bytes = if is_bare {
+        0
+    } else {
+        dir_size(worktree_path, Some(".git"))
+    };
+    let git_metadata_size_bytes = dir_size(git_dir, None);
+    let git_objects_size_bytes = dir_size(&git_dir.join("objects"), None);
+    let git_packfiles_size_bytes = dir_size(&git_dir.join("objects").join("pack"), None);
+    let git_refs_size_bytes = dir_size(&git_dir.join("refs"), None);
+    let lfs_objects_size_bytes = dir_size(&git_dir.join("lfs").join("objects"), None);
+    let lfs_enabled = detect_lfs_enabled(&repo, worktree_path, git_dir);
+
+    Ok(GitRepoInfo {
+        repo_path: repo_path.to_string(),
+        git_dir_path: git_dir.to_string_lossy().to_string(),
+        worktree_path: worktree_path.to_string_lossy().to_string(),
+        is_bare,
+        total_size_bytes: worktree_size_bytes.saturating_add(git_metadata_size_bytes),
+        worktree_size_bytes,
+        git_metadata_size_bytes,
+        git_objects_size_bytes,
+        git_packfiles_size_bytes,
+        git_refs_size_bytes,
+        lfs_enabled,
+        lfs_objects_size_bytes,
+    })
 }
