@@ -5,9 +5,9 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: #f5f5f5;
-  color: #333;
+  font-family: "Manrope", "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+  background-color: #eef2f8;
+  color: #1e293b;
 }
 
 .app {
@@ -116,6 +116,10 @@ body {
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.14), transparent 44%),
+    radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.1), transparent 40%),
+    linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%);
 }
 
 .welcome-screen {
@@ -165,18 +169,70 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 24px;
   overflow: hidden;
   min-height: 0;
+  gap: 12px;
 }
 
 .main-header {
-  margin-bottom: 20px;
+  margin-bottom: 6px;
+  padding: 16px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(10px);
 }
 
 .main-header h1 {
-  font-size: 24px;
-  color: #2c3e50;
+  font-size: 22px;
+  color: #0f172a;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.main-header-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #0e7490;
+  margin-bottom: 4px;
+}
+
+.main-header-path {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #475569;
+  font-family: "JetBrains Mono", "SF Mono", Menlo, Monaco, Consolas, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.main-header-meta {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.main-header-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #0f4c81;
+  background: linear-gradient(135deg, #d9ecff 0%, #e8fbf2 100%);
+  border: 1px solid rgba(15, 76, 129, 0.18);
 }
 
 .error-banner {
@@ -193,36 +249,40 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
 }
 
 .git-tab-btn {
-  border: 1px solid #d9d9d9;
-  background-color: #fff;
-  color: #555;
-  padding: 6px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background-color: rgba(255, 255, 255, 0.75);
+  color: #334155;
+  padding: 7px 13px;
   border-radius: 999px;
   cursor: pointer;
   font-size: 13px;
-  transition: all 0.2s;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 .git-tab-btn:hover {
-  border-color: #3498db;
-  color: #3498db;
+  border-color: rgba(14, 116, 144, 0.5);
+  color: #0e7490;
+  background-color: rgba(240, 249, 255, 0.92);
 }
 
 .git-tab-btn.active {
-  background-color: #3498db;
-  border-color: #3498db;
+  background: linear-gradient(135deg, #0369a1 0%, #0f766e 100%);
+  border-color: transparent;
   color: #fff;
+  box-shadow: 0 8px 18px rgba(3, 105, 161, 0.28);
 }
 
 .info-section {
-  background-color: white;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 18px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -230,7 +290,7 @@ body {
 
 .info-section-split {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: stretch;
 }
 
@@ -244,13 +304,14 @@ body {
   min-width: 0;
   min-height: 0;
   overflow: auto;
+  padding-right: 4px;
 }
 
 .info-diff-pane {
   flex: 0 0 auto;
   min-width: 420px;
-  border-left: 1px solid #eee;
-  padding-left: 16px;
+  border-left: 1px solid rgba(148, 163, 184, 0.28);
+  padding-left: 14px;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -273,15 +334,16 @@ body {
   bottom: 0;
   width: 2px;
   transform: translateX(-50%);
-  background-color: #e5e5e5;
+  background-color: rgba(148, 163, 184, 0.55);
 }
 
 .info-section h2 {
   font-size: 16px;
-  margin-bottom: 12px;
-  color: #2c3e50;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
+  margin-bottom: 14px;
+  color: #0f172a;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+  padding-bottom: 10px;
+  letter-spacing: 0.01em;
 }
 
 .branches-list, .remotes-list, .status-list, .commits-list, .worktrees-list {
@@ -300,9 +362,10 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px;
-  border-radius: 4px;
-  background-color: #f9f9f9;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background-color: #f8fbff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .repo-info-label {
@@ -328,18 +391,22 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px;
-  border-radius: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background-color: #f8fbff;
+  transition: all 0.2s ease;
 }
 
 .branch-item:hover {
-  background-color: #f0f0f0;
+  background-color: #eff8ff;
+  border-color: rgba(14, 116, 144, 0.35);
 }
 
 .branch-item.current {
-  background-color: #e3f2fd;
+  background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%);
+  border-color: rgba(14, 116, 144, 0.45);
   font-weight: bold;
 }
 
@@ -348,9 +415,10 @@ body {
 }
 
 .remote-item {
-  padding: 8px;
-  border-radius: 4px;
-  background-color: #f9f9f9;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background-color: #f8fbff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .remote-name {
@@ -369,9 +437,11 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px;
-  border-radius: 4px;
-  background-color: #f9f9f9;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background-color: #f8fbff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  gap: 12px;
 }
 
 .status-file {
@@ -385,50 +455,65 @@ body {
 }
 
 .status-new {
-  color: #4caf50;
+  color: #166534;
   font-size: 12px;
   font-weight: bold;
+  background-color: #dcfce7;
+  border-radius: 999px;
+  padding: 3px 9px;
 }
 
 .status-modified {
-  color: #ff9800;
+  color: #92400e;
   font-size: 12px;
   font-weight: bold;
+  background-color: #fef3c7;
+  border-radius: 999px;
+  padding: 3px 9px;
 }
 
 .status-deleted {
-  color: #f44336;
+  color: #991b1b;
   font-size: 12px;
   font-weight: bold;
+  background-color: #fee2e2;
+  border-radius: 999px;
+  padding: 3px 9px;
 }
 
 .status-staged {
-  color: #2196f3;
+  color: #1e3a8a;
   font-size: 12px;
   font-weight: bold;
+  background-color: #dbeafe;
+  border-radius: 999px;
+  padding: 3px 9px;
 }
 
 .commit-item {
   display: flex;
   gap: 12px;
   padding: 12px;
-  border-radius: 4px;
-  background-color: #f9f9f9;
+  border-radius: 10px;
+  background-color: #f8fbff;
+  border: 1px solid rgba(148, 163, 184, 0.22);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .commit-item:hover {
-  background-color: #f0f0f0;
+  background-color: #eff8ff;
+  border-color: rgba(14, 116, 144, 0.34);
 }
 
 .commit-item.active {
-  background-color: #eaf3ff;
+  background: linear-gradient(135deg, #e0f2fe 0%, #ecfeff 100%);
 }
 
 .commit-item-wrapper {
-  background-color: #f9f9f9;
-  border-radius: 4px;
+  background-color: #f8fbff;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
   overflow: hidden;
 }
 
@@ -454,9 +539,9 @@ body {
 }
 
 .commit-changes {
-  border-top: 1px solid #e6e6e6;
-  padding: 8px 12px;
-  background-color: #fcfcfc;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+  padding: 9px 12px;
+  background-color: #ffffff;
 }
 
 .commit-change-item {
@@ -520,9 +605,10 @@ body {
 }
 
 .worktree-item {
-  padding: 8px;
-  border-radius: 4px;
-  background-color: #f9f9f9;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background-color: #f8fbff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .worktree-path {
@@ -539,7 +625,10 @@ body {
 
 .info-diff-pane h2 {
   font-size: 16px;
-  color: #2c3e50;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .diff-toolbar {
@@ -548,8 +637,8 @@ body {
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+  padding-bottom: 10px;
 }
 
 .diff-view-switch {
@@ -558,24 +647,25 @@ body {
 }
 
 .diff-view-btn {
-  border: 1px solid #d9d9d9;
+  border: 1px solid rgba(148, 163, 184, 0.4);
   background-color: #fff;
-  border-radius: 6px;
-  padding: 4px 10px;
+  border-radius: 999px;
+  padding: 5px 11px;
   font-size: 12px;
-  color: #666;
+  color: #334155;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .diff-view-btn.active {
-  border-color: #3498db;
-  color: #3498db;
-  background-color: #eef6fd;
+  border-color: rgba(14, 116, 144, 0.55);
+  color: #075985;
+  background-color: #e0f2fe;
 }
 
 .diff-editor {
-  border: 1px solid #eee;
-  border-radius: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
   overflow: hidden;
   flex: 1;
   min-height: 0;

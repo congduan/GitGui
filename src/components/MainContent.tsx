@@ -66,6 +66,31 @@ const MainContent: React.FC<MainContentProps> = ({ workspacePath }) => {
     return `${value.toFixed(2)} ${unit}`;
   };
 
+  const formatCommitDate = (rawDate: string) => {
+    const value = rawDate.trim();
+    if (!value) {
+      return '-';
+    }
+
+    // Handle numeric Unix timestamps from backend (seconds or milliseconds).
+    if (/^-?\d+$/.test(value)) {
+      const numeric = Number(value);
+      if (Number.isFinite(numeric)) {
+        const timestamp = value.length <= 10 ? numeric * 1000 : numeric;
+        const parsed = new Date(timestamp);
+        if (!Number.isNaN(parsed.getTime())) {
+          return parsed.toLocaleString();
+        }
+      }
+    }
+
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toLocaleString();
+    }
+    return value;
+  };
+
   useEffect(() => {
     const loadGitData = async () => {
       console.log('Loading Git data for:', workspacePath);
@@ -229,6 +254,31 @@ const MainContent: React.FC<MainContentProps> = ({ workspacePath }) => {
     return <div className="main-content">Loading...</div>;
   }
 
+  const activeTabTitle = activeTab[0].toUpperCase() + activeTab.slice(1);
+  const repoDisplayName = (() => {
+    const normalized = workspacePath.replace(/[\\/]+$/, '');
+    const segments = normalized.split(/[\\/]/);
+    return segments[segments.length - 1] || workspacePath;
+  })();
+  const activeTabCount = (() => {
+    switch (activeTab) {
+      case 'repo':
+        return repoInfo ? 12 : 0;
+      case 'branches':
+        return branches.length;
+      case 'remotes':
+        return remotes.length;
+      case 'status':
+        return status.length;
+      case 'commits':
+        return commits.length;
+      case 'worktrees':
+        return worktrees.length;
+      default:
+        return 0;
+    }
+  })();
+
   const renderTabContent = () => {
     if (activeTab === 'repo') {
       if (!repoInfo) {
@@ -310,7 +360,7 @@ const MainContent: React.FC<MainContentProps> = ({ workspacePath }) => {
                 <div className="commit-info">
                   <div className="commit-message">{commit.message}</div>
                   <div className="commit-meta">
-                    {commit.author} • {new Date(commit.date).toLocaleString()}
+                    {commit.author} • {formatCommitDate(commit.date)}
                   </div>
                 </div>
               </div>
@@ -357,7 +407,13 @@ const MainContent: React.FC<MainContentProps> = ({ workspacePath }) => {
   return (
     <div className="main-content">
       <div className="main-header">
-        <h1>{workspacePath}</h1>
+        <div className="main-header-eyebrow">Repository</div>
+        <h1 title={repoDisplayName}>{repoDisplayName}</h1>
+        <p className="main-header-path" title={workspacePath}>{workspacePath}</p>
+        <div className="main-header-meta">
+          <span className="main-header-pill">{activeTabTitle}</span>
+          <span className="main-header-pill">{activeTabCount} Items</span>
+        </div>
       </div>
       {error && (
         <div className="error-banner">
@@ -380,7 +436,7 @@ const MainContent: React.FC<MainContentProps> = ({ workspacePath }) => {
         className={`info-section info-section-split ${selectedFile ? 'with-diff' : ''} ${isResizingDiffPane ? 'is-resizing' : ''}`}
       >
         <div className="info-main-pane">
-          <h2>{activeTab[0].toUpperCase() + activeTab.slice(1)}</h2>
+          <h2>{activeTabTitle}</h2>
           {renderTabContent()}
         </div>
 
