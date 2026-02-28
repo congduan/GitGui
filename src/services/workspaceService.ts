@@ -15,9 +15,11 @@ export class WorkspaceService {
     try {
       if (isBrowser) {
         // 在浏览器环境中使用localStorage
-        const data = localStorage.getItem(this.STORAGE_KEY);
-        if (data) {
-          this.workspaces = JSON.parse(data);
+        if (typeof localStorage !== 'undefined') {
+          const data = localStorage.getItem(this.STORAGE_KEY);
+          if (data) {
+            this.workspaces = JSON.parse(data);
+          }
         }
       } else {
         // 在Node.js环境中使用文件系统
@@ -45,7 +47,9 @@ export class WorkspaceService {
     try {
       if (isBrowser) {
         // 在浏览器环境中使用localStorage
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.workspaces, null, 2));
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.workspaces, null, 2));
+        }
       } else {
         // 在Node.js环境中使用文件系统
         const fs = require('fs');

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GitService } from '../services/gitService';
 import type { GitBranch, GitRemote, GitCommit, GitCommitChange, GitRepoInfo, GitStatus, Worktree } from '../types';
 import { DiffEditor } from '@monaco-editor/react';
@@ -9,6 +9,11 @@ interface MainContentProps {
 
 type TabKey = 'repo' | 'branches' | 'remotes' | 'status' | 'commits' | 'worktrees';
 type DiffViewMode = 'sideBySide' | 'inline';
+type CommitGraphNode = {
+  lane: number;
+  parentLanes: number[];
+  laneCount: number;
+};
 
 const MainContent: React.FC<MainContentProps> = ({ workspacePath }) => {
   const [branches, setBranches] = useState<GitBranch[]>([]);
@@ -181,6 +186,9 @@ const MainContent: React.FC<MainContentProps> = ({ workspacePath }) => {
   }, [isResizingDiffPane]);
 
   const handleCheckoutBranch = async (branchName: string) => {
+    if (!window.confirm(`确认切换到分支 "${branchName}" 吗？`)) {
+      return;
+    }
     try {
       const gitService = new GitService(workspacePath);
       await gitService.checkoutBranch(branchName);
@@ -249,6 +257,48 @@ const MainContent: React.FC<MainContentProps> = ({ workspacePath }) => {
       console.error('Failed to get commit file diff:', error);
     }
   };
+
+  const commitGraphByHash = useMemo<Record<string, CommitGraphNode>>(() => {
+    const graph: Record<string, CommitGraphNode> = {};
+    const lanes: string[] = [];
+
+    for (const commit of commits) {
+      let lane = lanes.indexOf(commit.hash);
+      if (lane === -1) {
+        lanes.unshift(commit.hash);
+        lane = 0;
+      }
+
+      const parentLanes = commit.parents.map(parentHash => {
+        let parentLane = lanes.indexOf(parentHash);
+        if (parentLane === -1) {
+          lanes.push(parentHash);
+          parentLane = lanes.length - 1;
+        }
+        return parentLane;
+      });
+
+      graph[commit.hash] = {
+        lane,
+        parentLanes,
+        laneCount: Math.max(lanes.length, lane + 1, ...parentLanes.map(parentLane => parentLane + 1)),
+      };
+
+      if (commit.parents.length > 0) {
+        lanes[lane] = commit.parents[0];
+      } else {
+        lanes.splice(lane, 1);
+      }
+
+      for (let index = lanes.length - 1; index >= 0; index -= 1) {
+        if (lanes.indexOf(lanes[index]) !== index) {
+          lanes.splice(index, 1);
+        }
+      }
+    }
+
+    return graph;
+  }, [commits]);
 
   if (loading) {
     return <div className="main-content">Loading...</div>;
@@ -356,12 +406,64 @@ const MainContent: React.FC<MainContentProps> = ({ workspacePath }) => {
                 className={`commit-item ${expandedCommitHash === commit.hash ? 'active' : ''}`}
                 onClick={() => handleToggleCommitChanges(commit.hash)}
               >
+                <div className="commit-graph" aria-hidden="true">
+                  <svg
+                    width={Math.max((commitGraphByHash[commit.hash]?.laneCount || 1) * 14, 14)}
+                    height="26"
+                    viewBox={`0 0 ${Math.max((commitGraphByHash[commit.hash]?.laneCount || 1) * 14, 14)} 26`}
+                  >
+                    {Array.from({ length: commitGraphByHash[commit.hash]?.laneCount || 1 }, (_, laneIndex) => {
+                      const x = laneIndex * 14 + 7;
+                      return (
+                        <line
+                          key={`${commit.hash}-lane-${laneIndex}`}
+                          x1={x}
+                          y1="0"
+                          x2={x}
+                          y2="26"
+                          className="commit-graph-line"
+                        />
+                      );
+                    })}
+                    {(commitGraphByHash[commit.hash]?.parentLanes || [])
+                      .filter(parentLane => parentLane !== commitGraphByHash[commit.hash]?.lane)
+                      .map(parentLane => {
+                        const lane = commitGraphByHash[commit.hash]?.lane || 0;
+                        const fromX = lane * 14 + 7;
+                        const toX = parentLane * 14 + 7;
+                        return (
+                          <path
+                            key={`${commit.hash}-parent-${parentLane}`}
+                            d={`M ${fromX} 9 C ${fromX} 16 ${toX} 16 ${toX} 24`}
+                            className="commit-graph-merge"
+                          />
+                        );
+                      })}
+                    <circle
+                      cx={(commitGraphByHash[commit.hash]?.lane || 0) * 14 + 7}
+                      cy="9"
+                      r="4.1"
+                      className="commit-graph-node"
+                    />
+                  </svg>
+                </div>
                 <div className="commit-hash">{commit.hash.substring(0, 7)}</div>
                 <div className="commit-info">
                   <div className="commit-message">{commit.message}</div>
                   <div className="commit-meta">
                     {commit.author} • {formatCommitDate(commit.date)}
+                    {commit.parents.length > 1 && (
+                      <span className="commit-merge-badge">Merge ({commit.parents.length} parents)</span>
+                    )}
                   </div>
+                  {commit.parents.length > 0 && (
+                    <div className="commit-parents">
+                      Parents: {commit.parents.map(parent => parent.substring(0, 7)).join(', ')}
+                    </div>
+                  )}
+                  {commit.parents.length === 0 && (
+                    <div className="commit-parents">Root commit</div>
+                  )}
                 </div>
               </div>
               {expandedCommitHash === commit.hash && (

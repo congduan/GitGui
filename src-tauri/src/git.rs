@@ -26,6 +26,7 @@ pub struct GitCommit {
     pub author: String,
     pub date: String,
     pub message: String,
+    pub parents: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -215,12 +216,14 @@ pub fn get_commits(repo_path: &str) -> Result<Vec<GitCommit>, Box<dyn Error>> {
         let time = commit.author().when();
         let date = format!("{}", time.seconds());
         let message = commit.message().unwrap_or("").trim().to_string();
+        let parents = commit.parent_ids().map(|id| id.to_string()).collect();
         
         commits.push(GitCommit {
             hash: oid.to_string(),
             author,
             date,
             message,
+            parents,
         });
         
         if commits.len() >= 50 {

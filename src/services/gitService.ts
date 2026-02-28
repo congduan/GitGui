@@ -20,7 +20,8 @@ const mockInvoke = async (command: string, params: any) => {
           hash: '1234567890abcdef1234567890abcdef12345678',
           author: 'John Doe',
           date: new Date().toISOString(),
-          message: 'Initial commit'
+          message: 'Initial commit',
+          parents: []
         }
       ];
     case 'get_status':
@@ -75,7 +76,7 @@ const invoke = async <T>(command: string, params: Record<string, unknown>): Prom
     return tauriInvoke<T>(command, params);
   }
   return mockInvoke(command, params) as Promise<T>;
-}
+};
 
 export class GitService {
   private workdir: string;
@@ -167,10 +168,11 @@ export class GitService {
       //   filePath: _filePath
       // });
       // return diff;
+      return '';
     } catch (error) {
       console.error('Error getting diff:', error);
+      return '';
     }
-    return '';
   }
 
   async getWorktrees(): Promise<Worktree[]> {

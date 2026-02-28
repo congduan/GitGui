@@ -22,6 +22,7 @@ export interface GitCommit {
   author: string;
   date: string;
   message: string;
+  parents: string[];
 }
 
 export interface GitCommitChange {
